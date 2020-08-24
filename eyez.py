@@ -1,9 +1,12 @@
 # eyez.py
 # August 2020
 # First attempts at extracting eyes from an image
+#
+# python3 eyez.py
 
 
 from scipy.spatial import distance as dist
+from collections import OrderedDict
 from imutils import face_utils
 import numpy as np
 import argparse
@@ -30,15 +33,34 @@ def eye_aspect_ratio(eye):
 	C = dist.euclidean(eye[0], eye[3])
 	return (A + B) / (2. * C)
 
+def shape_to_np(shape):
+    coords = np.zeros((68, 2), dtype="int")
+    for i in range(0, 68):
+        coords[i] = (shape.part(i).x, shape.part(i).y)
+    return coords
+
+def img_show(txt, img):
+	cv2.imshow(txt, img)
+	cv2.waitKey(0)
+
+eye_landmarks = OrderedDict([
+	("right_eyebrow", (17, 22)),
+	("left_eyebrow", (22, 27)),
+	("right_eye", (36, 42)),
+	("left_eye", (42, 48)),
+])
+
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
 
 # Indices of the facial landmarks for the left and right eyes
-(lStart, lEnd) = face_utils.FACIAL_LANDMARKS_IDXS["left_eye"]
-(rStart, rEnd) = face_utils.FACIAL_LANDMARKS_IDXS["right_eye"]
+(lefteye_start, lefteye_end) = eye_landmarks["left_eye"]
+(righteye_start, righteye_end) = eye_landmarks["right_eye"]
+#(lefteye_start, lefteye_end) = face_utils.FACIAL_LANDMARKS_IDXS["left_eye"]
+#(righteye_start, righteye_end) = face_utils.FACIAL_LANDMARKS_IDXS["right_eye"]
 
-blink_ratio = .3
-blink = False
+eyes_closed = False
+closed_ratio = .3
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--image", type=str, default="images/photo_1.jpg")
@@ -53,33 +75,34 @@ extracted_eyes = []
 for face in faces:
 	# Facial landmarks
 	shape = predictor(gray, face)
-	shape = face_utils.shape_to_np(shape)
+	shape = shape_to_np(shape)
+	#shape = face_utils.shape_to_np(shape)
 	# Left and right eye coordinates
-	left_eye = shape[lStart:lEnd]
-	right_eye = shape[rStart:rEnd]
+	left_eye = shape[lefteye_start:lefteye_end]
+	right_eye = shape[righteye_start:righteye_end]
 	# Aspect ratios
 	left_aspect_ratio = eye_aspect_ratio(left_eye)
 	right_aspect_ratio = eye_aspect_ratio(right_eye)
-	ear = (left_aspect_ratio + right_aspect_ratio) / 2.
-	if ear < blink_ratio:
-		blink = True
+	eyez_aspect_ratio = (left_aspect_ratio + right_aspect_ratio) / 2.
+	if eyez_aspect_ratio < closed_ratio:
+		print("detected eyes closed or blinking")
+		eyes_closed = True
+		#continue
 	# Extracting eyes
 	left_eye_hull = cv2.convexHull(left_eye)
 	right_eye_hull = cv2.convexHull(right_eye)
 	extracted_eyes.append(cv2.boundingRect(left_eye_hull))
 	extracted_eyes.append(cv2.boundingRect(right_eye_hull))
-	#cv2.drawContours(img, [left_eye_hull], -1, (255, 255, 0), 2)
-	#cv2.drawContours(img, [right_eye_hull], -1, (255, 255, 0), 2)
+	cv2.drawContours(img, [left_eye_hull], -1, (255, 255, 0), 2)
+	cv2.drawContours(img, [right_eye_hull], -1, (255, 255, 0), 2)
 
-cv2.imshow(img_path, img)
-cv2.waitKey(0)
+img_show(img_path, img)
 
-for box in extracted_eyes:
-	(x, y, w, h) = box
-	#cv2.rectangle(img, (x,y), (w,h), (0,0,255), 2)
-	box = img[y-2:y+h+2, x-2:x+w+2]
-	cv2.imshow(img_path, box)
-	cv2.waitKey(0)
+if not eyes_closed:
+	for eye in extracted_eyes:
+		(x, y, w, h) = eye
+		eye = img[y-2:y+h+2, x-2:x+w+2]
+		img_show("eye", eye)
 
 
 
