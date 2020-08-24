@@ -7,7 +7,6 @@
 
 from scipy.spatial import distance as dist
 from collections import OrderedDict
-from imutils import face_utils
 import numpy as np
 import argparse
 import imutils
@@ -43,24 +42,22 @@ def img_show(txt, img):
 	cv2.imshow(txt, img)
 	cv2.waitKey(0)
 
+# Indices of the facial landmarks for the left and right eyes
 eye_landmarks = OrderedDict([
 	("right_eyebrow", (17, 22)),
 	("left_eyebrow", (22, 27)),
 	("right_eye", (36, 42)),
 	("left_eye", (42, 48)),
 ])
+(lefteye_start, lefteye_end) = eye_landmarks["left_eye"]
+(righteye_start, righteye_end) = eye_landmarks["right_eye"]
 
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
 
-# Indices of the facial landmarks for the left and right eyes
-(lefteye_start, lefteye_end) = eye_landmarks["left_eye"]
-(righteye_start, righteye_end) = eye_landmarks["right_eye"]
-#(lefteye_start, lefteye_end) = face_utils.FACIAL_LANDMARKS_IDXS["left_eye"]
-#(righteye_start, righteye_end) = face_utils.FACIAL_LANDMARKS_IDXS["right_eye"]
-
 eyes_closed = False
 closed_ratio = .3
+extracted_eyes = []
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--image", type=str, default="images/photo_1.jpg")
@@ -70,13 +67,11 @@ img = cv2.imread(img_path)
 img = resize_preserve_aspect_ratio(img, 500)
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 faces = detector(gray, 0)
-extracted_eyes = []
 
 for face in faces:
 	# Facial landmarks
 	shape = predictor(gray, face)
 	shape = shape_to_np(shape)
-	#shape = face_utils.shape_to_np(shape)
 	# Left and right eye coordinates
 	left_eye = shape[lefteye_start:lefteye_end]
 	right_eye = shape[righteye_start:righteye_end]
