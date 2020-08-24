@@ -1,8 +1,16 @@
 # eyez.py
 # August 2020
-# First attempts at extracting eyes from an image
+# Extracting eyes from an image
 #
 # python3 eyez.py
+#
+# todo:
+# detect eyes X
+# extract eyes X
+# detect eyes closed X
+# detect gaze direction
+# draw gaze direction
+# detect eye color ?
 
 
 from scipy.spatial import distance as dist
@@ -42,7 +50,7 @@ def img_show(txt, img):
 	cv2.imshow(txt, img)
 	cv2.waitKey(0)
 
-# Indices of the facial landmarks for the left and right eyes
+# Indices of the facial landmarks for left and right eyes
 eye_landmarks = OrderedDict([
 	("right_eyebrow", (17, 22)),
 	("left_eyebrow", (22, 27)),
@@ -55,9 +63,14 @@ eye_landmarks = OrderedDict([
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
 
-eyes_closed = False
-closed_ratio = .3
 extracted_eyes = []
+eyes_closed = blinking = False
+left_closed = right_closed = False
+closed_ratio = .2
+blink_ratio = .3
+
+info = []
+display_info = True
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--image", type=str, default="images/photo_1.jpg")
@@ -77,27 +90,50 @@ for face in faces:
 	right_eye = shape[righteye_start:righteye_end]
 	# Aspect ratios
 	left_aspect_ratio = eye_aspect_ratio(left_eye)
+	if left_aspect_ratio < closed_ratio:
+		info.append("detected LEFT eye closed or winking")
+		left_closed = True
 	right_aspect_ratio = eye_aspect_ratio(right_eye)
+	if right_aspect_ratio < closed_ratio:
+		info.append("detected RIGHT eye closed or winking")
+		right_closed = True
 	eyez_aspect_ratio = (left_aspect_ratio + right_aspect_ratio) / 2.
-	if eyez_aspect_ratio < closed_ratio:
-		print("detected eyes closed or blinking")
+	if eyez_aspect_ratio < blink_ratio:
+		info.append("detected blinking")
+		blinking = True
+	if left_closed and right_closed:
+		info.append("detected both eyes closed")
 		eyes_closed = True
-		#continue
 	# Extracting eyes
 	left_eye_hull = cv2.convexHull(left_eye)
 	right_eye_hull = cv2.convexHull(right_eye)
-	extracted_eyes.append(cv2.boundingRect(left_eye_hull))
-	extracted_eyes.append(cv2.boundingRect(right_eye_hull))
-	cv2.drawContours(img, [left_eye_hull], -1, (255, 255, 0), 2)
-	cv2.drawContours(img, [right_eye_hull], -1, (255, 255, 0), 2)
+	extracted_eyes.append((cv2.boundingRect(left_eye_hull), left_closed))
+	extracted_eyes.append((cv2.boundingRect(right_eye_hull), right_closed))
+	#cv2.drawContours(img, [left_eye_hull], -1, (255, 255, 0), 2)
+	#cv2.drawContours(img, [right_eye_hull], -1, (255, 255, 0), 2)
 
 img_show(img_path, img)
 
 if not eyes_closed:
-	for eye in extracted_eyes:
-		(x, y, w, h) = eye
-		eye = img[y-2:y+h+2, x-2:x+w+2]
-		img_show("eye", eye)
+	for (eye, closed) in extracted_eyes:
+		if not closed:
+			(x, y, w, h) = eye
+			eye = img[y-2:y+h+2, x-2:x+w+2]
+			img_show("eye", eye)
+			gray = cv2.cvtColor(eye, cv2.COLOR_BGR2GRAY)
+			thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 115, 1)
+			#thresh = cv2.threshold(thresh, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
+			#img_show("eye", thresh)
+			#thresh = cv2.erode(thresh, None, iterations=2)
+			#img_show("eye", thresh)
+			#thresh = cv2.dilate(thresh, None, iterations=4)
+			#img_show("eye", thresh)
+			#thresh = cv2.medianBlur(thresh, 3)
+			#img_show("eye", thresh)
+
+if display_info:
+	for msg in info:
+		print(msg)
 
 
 
