@@ -8,11 +8,14 @@
 # detect eyes X
 # extract eyes X
 # detect eyes closed X
+# extract the iris and pupil
 # detect gaze direction
 # draw gaze direction
 # detect eye color ?
 
 
+from collections import Counter
+from sklearn.cluster import KMeans
 from scipy.spatial import distance as dist
 from collections import OrderedDict
 import numpy as np
@@ -49,6 +52,13 @@ def shape_to_np(shape):
 def img_show(txt, img):
 	cv2.imshow(txt, img)
 	cv2.waitKey(0)
+
+eye_color_palette = [
+	([69, 24, 0], [99, 72, 30]), # brown
+	([86, 31, 4], [220, 88, 50]),
+	([25, 146, 190], [62, 174, 250]),
+	([103, 86, 65], [145, 133, 128])
+]
 
 # Indices of the facial landmarks for left and right eyes
 eye_landmarks = OrderedDict([
@@ -114,12 +124,33 @@ for face in faces:
 
 img_show(img_path, img)
 
+def RGB2HEX(color):
+	R = int(color[0])
+	G = int(color[1])
+	B = int(color[2])
+	return "#{:02x}{:02x}{:02x}".format(R, G, B)
+
+def eye_color(eye):
+	eye = cv2.cvtColor(eye, cv2.COLOR_BGR2RGB)
+	eye = eye.reshape(eye.shape[0] * eye.shape[1], 3)
+	clf = KMeans(n_clusters=6)
+	labels = clf.fit_predict(eye)
+	counts = Counter(labels)
+	center_colors = clf.cluster_centers_
+	ordered_colors = [center_colors[i] for i in counts.keys()]
+	hex_colors = [RGB2HEX(ordered_colors[i]) for i in counts.keys()]
+	rgb_colors = [ordered_colors[i] for i in counts.keys()]
+	print("\nhex_colors", hex_colors)
+	print("\nlabels", labels)
+	print("\nordered_colors", ordered_colors)
+
 if not eyes_closed:
 	for (eye, closed) in extracted_eyes:
 		if not closed:
 			(x, y, w, h) = eye
 			eye = img[y-2:y+h+2, x-2:x+w+2]
 			img_show("eye", eye)
+			eye_color(eye)
 			gray = cv2.cvtColor(eye, cv2.COLOR_BGR2GRAY)
 			thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 115, 1)
 			#thresh = cv2.threshold(thresh, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
