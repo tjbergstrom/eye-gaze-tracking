@@ -4,13 +4,13 @@
 #
 # python3 eyez.py
 #
-# todo:
-# detect eyes X
-# extract eyes X
-# detect eyes closed X
-# detect gaze direction
-# draw gaze direction
-# detect eye color ?
+# wish list:
+# [x] detect eyes
+# [x] extract eyes
+# [x] detect eyes closed
+# [ ] detect gaze direction
+# [ ] draw gaze direction
+# [ ] detect eye color ?
 
 
 from scipy.spatial import distance as dist
