@@ -4,24 +4,13 @@
 #
 # python3 eyez.py
 #
-<<<<<<< HEAD
-# todo:
-# detect eyes X
-# extract eyes X
-# detect eyes closed X
-# extract the iris and pupil
-# detect gaze direction
-# draw gaze direction
-# detect eye color ?
-=======
-# wish list:
+# to do list:
 # [x] detect eyes
 # [x] extract eyes
 # [x] detect eyes closed
 # [ ] detect gaze direction
 # [ ] draw gaze direction
 # [ ] detect eye color ?
->>>>>>> 46e8cf50e24792cc09545de79e0d000342e9e7c8
 
 
 from collections import Counter
