@@ -25,6 +25,16 @@ import dlib
 import cv2
 
 
+def img_show(txt, img):
+	cv2.imshow(txt, img)
+	cv2.waitKey(0)
+
+def shape_to_np(shape):
+    coords = np.zeros((68, 2), dtype="int")
+    for i in range(0, 68):
+        coords[i] = (shape.part(i).x, shape.part(i).y)
+    return coords
+
 def resize_preserve_aspect_ratio(img, width):
     if width is None or width < 1:
         return img
@@ -42,18 +52,8 @@ def eye_aspect_ratio(eye):
 	C = dist.euclidean(eye[0], eye[3])
 	return (A + B) / (2. * C)
 
-def shape_to_np(shape):
-    coords = np.zeros((68, 2), dtype="int")
-    for i in range(0, 68):
-        coords[i] = (shape.part(i).x, shape.part(i).y)
-    return coords
-
-def img_show(txt, img):
-	cv2.imshow(txt, img)
-	cv2.waitKey(0)
-
 eye_color_palette = [
-	([69, 24, 0], [99, 72, 30]), # brown
+	([69, 24, 0], [99, 72, 30]),
 	([86, 31, 4], [220, 88, 50]),
 	([25, 146, 190], [62, 174, 250]),
 	([103, 86, 65], [145, 133, 128])
@@ -100,11 +100,11 @@ for face in faces:
 	# Aspect ratios
 	left_aspect_ratio = eye_aspect_ratio(left_eye)
 	if left_aspect_ratio < closed_ratio:
-		info.append("detected LEFT eye closed or winking")
+		info.append("detected left eye closed or winking")
 		left_closed = True
 	right_aspect_ratio = eye_aspect_ratio(right_eye)
 	if right_aspect_ratio < closed_ratio:
-		info.append("detected RIGHT eye closed or winking")
+		info.append("detected right eye closed or winking")
 		right_closed = True
 	eyez_aspect_ratio = (left_aspect_ratio + right_aspect_ratio) / 2.
 	if eyez_aspect_ratio < blink_ratio:
@@ -151,7 +151,9 @@ if not eyes_closed:
 			img_show("eye", eye)
 			eye_color(eye)
 			gray = cv2.cvtColor(eye, cv2.COLOR_BGR2GRAY)
-			thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 115, 1)
+			thresh = cv2.adaptiveThreshold(
+				gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 115, 1
+			)
 			#thresh = cv2.threshold(thresh, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
 			#img_show("eye", thresh)
 			#thresh = cv2.erode(thresh, None, iterations=2)
