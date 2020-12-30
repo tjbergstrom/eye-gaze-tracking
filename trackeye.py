@@ -16,17 +16,19 @@ import cv2
 
 class Eye:
 	def __init__(self, LR=""):
-		self.eye = None
-		self.box = None
+		self.points = []
+		self.box = (0,0,0,0)
 		self.img = None
 		self.hull = None
+		self.iris = None
+		self.pupil = (0,0)
 		self.color = ""
 		self.RGB = (0,0,0)
 		self.closed = False
 		self.LR = LR
 
 	def __repr__(self):
-		return f"{self.LR}: {self.box}"
+		return f"{self.LR}: {self.pupil}"
 
 
 def aspect_ratio(eye):
@@ -45,20 +47,20 @@ def shape_to_np(shape):
     return coords
 
 
-def extract_eyes(predictor, detector, img):
+def extract_eyes(predictor, detector, gray):
 	eyes = []
 	faces = detector(gray, 0)
 	for face in faces:
 		left, right = Eye("L"), Eye("R")
-		shape = shape_to_np(predictor(img, face))
-		left.eye = shape[42 : 48]
-		right.eye = shape[36 : 42]
-		if aspect_ratio(left.eye) < 0.2:
+		shape = shape_to_np(predictor(gray, face))
+		left.points = shape[42 : 48]
+		right.points = shape[36 : 42]
+		if aspect_ratio(left.points) < 0.2:
 			left.closed = True
-		if aspect_ratio(right.eye) < 0.2:
+		if aspect_ratio(right.points) < 0.2:
 			right.closed = True
-		left.hull = cv2.convexHull(left.eye)
-		right.hull = cv2.convexHull(right.eye)
+		left.hull = cv2.convexHull(left.points)
+		right.hull = cv2.convexHull(right.points)
 		left.box = cv2.boundingRect(left.hull)
 		right.box = cv2.boundingRect(right.hull)
 		eyes.append(left)
@@ -66,15 +68,29 @@ def extract_eyes(predictor, detector, img):
 	return eyes
 
 
-def eye_colors(eyes, img):
+def find_centers(eyes, img):
 	for eye in eyes:
 		if eye.closed:
 			continue
 		(x, y, w, h) = eye.box
-		eye.img = img[y-2 : y+h+2, x-2 : x+w+2]
-		cv2.imshow("", eye.img)
-		cv2.waitKey(10)
-
+		eye.img = img[y : y+h, x : x+w]
+		eye_img = cv2.cvtColor(eye.img, cv2.COLOR_BGR2GRAY)
+		thresh = cv2.threshold(eye_img, 125, 255, cv2.THRESH_BINARY)[1]
+		thresh = cv2.erode(thresh, None, iterations=2)
+		thresh = cv2.bitwise_not(thresh)
+		contours = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)[0]
+		if not contours:
+			continue
+		contour = max(contours, key=cv2.contourArea)
+		moment = cv2.moments(contour)
+		cx = int(moment["m10"] // moment["m00"])
+		cy = int(moment["m01"] // moment["m00"])
+		d = eye.img.shape[0]
+		r = d // 2
+		if cx - r < 0:
+			cx = r
+		eye.iris = eye.img[0 : d, cx-r : cx+r]
+		eye.pupil = (x+cx, y+cy)
 
 
 
@@ -93,7 +109,7 @@ if __name__ == "__main__":
 
 	eyes = extract_eyes(predictor, detector, gray)
 
-	eye_colors(eyes, img)
+	find_centers(eyes, img)
 
 	print(eyes)
 
