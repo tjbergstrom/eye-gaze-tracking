@@ -12,6 +12,7 @@ import argparse
 import imutils
 import dlib
 import cv2
+import statistics
 
 
 class Eye:
@@ -23,21 +24,21 @@ class Eye:
 		self.iris = None
 		self.pupil = (0,0)
 		self.color = ""
-		self.RGB = (0,0,0)
+		self.BGR = (0,0,0)
 		self.closed = False
 		self.LR = LR
 
 	def __repr__(self):
-		return f"{self.LR}: {self.pupil}"
+		return f"{self.LR}: {self.pupil}, {self.BGR}"
 
 
 def aspect_ratio(eye):
-	# Euclidean distances between vertical xy coords
+	# Vertical xy coords
 	A = dist.euclidean(eye[1], eye[5])
 	B = dist.euclidean(eye[2], eye[4])
-	# Euclidean distance between horizontal xy coords
+	# Horizontal xy coords
 	C = dist.euclidean(eye[0], eye[3])
-	return (A + B) / (2. * C)
+	return (A + B) / (2.0 * C)
 
 
 def shape_to_np(shape):
@@ -93,6 +94,40 @@ def find_centers(eyes, img):
 		eye.pupil = (x+cx, y+cy)
 
 
+def find_colors(eyes):
+	for eye in eyes:
+		if eye.closed:
+			continue
+		bgr = []
+		mid_x = eye.iris.shape[1] // 2
+		qtr_x = eye.iris.shape[1] // 8
+		for x in range(mid_x-qtr_x+1, mid_x+qtr_x):
+			y = eye.iris.shape[0]-4
+			prev_avg = None
+			while y > eye.iris.shape[0] // 2:
+				y -= 1
+				avg = statistics.mean(eye.iris[y,x])
+				if prev_avg is None:
+					prev_avg = avg
+					continue
+				prev_avg = avg
+				if abs(avg - prev_avg) > 24:
+					continue
+				if abs(avg - prev_avg) > 36:
+					break
+				bgr.append(eye.iris[y,x])
+		(b,g,r) = (0,0,0)
+		for i in bgr:
+			b += i[0]
+			g += i[1]
+			r += i[2]
+		b = int(b // len(bgr))
+		g = int(g // len(bgr))
+		r = int(r // len(bgr))
+		eye.BGR = (b,g,r)
+
+
+
 
 if __name__ == "__main__":
 	ap = argparse.ArgumentParser()
@@ -110,6 +145,7 @@ if __name__ == "__main__":
 	eyes = extract_eyes(predictor, detector, gray)
 
 	find_centers(eyes, img)
+	find_colors(eyes)
 
 	print(eyes)
 
