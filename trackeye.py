@@ -13,6 +13,7 @@ import imutils
 import dlib
 import cv2
 import statistics
+from imutils import build_montages
 
 
 class Eye:
@@ -127,11 +128,27 @@ def find_colors(eyes):
 		eye.BGR = (b,g,r)
 
 
+def sample_output(eyes, img, sz=200):
+	imgs = [img]
+	img_cpy = img.copy()
+	for eye in eyes:
+		if eye.closed:
+			continue
+		imgs.append(eye.iris)
+		color = np.zeros((sz, sz, 3), np.uint8)
+		color[:,:] = eye.BGR
+		imgs.append(color)
+		cv2.circle(img_cpy, eye.pupil, 13, (255,255,255), -1)
+	imgs.append(img_cpy)
+	imgs_cpy = [imgs[0], imgs[1], imgs[3], imgs[5], imgs[2], imgs[4]]
+	m = build_montages(imgs_cpy, (sz, sz), (3, 2))[0]
+	cv2.imshow("", m)
+	cv2.waitKey(0)
 
 
 if __name__ == "__main__":
 	ap = argparse.ArgumentParser()
-	ap.add_argument("-i", "--image", type=str, default="images/photo_1.jpg")
+	ap.add_argument("-i", "--image", type=str, default="images/photo_9.jpg")
 	args = vars(ap.parse_args())
 
 	detector = dlib.get_frontal_face_detector()
@@ -146,6 +163,8 @@ if __name__ == "__main__":
 
 	find_centers(eyes, img)
 	find_colors(eyes)
+
+	sample_output(eyes, img)
 
 	print(eyes)
 
