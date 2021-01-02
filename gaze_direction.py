@@ -31,8 +31,8 @@ class Face_Tilt:
 
 class Gaze():
     def __init__(self, w, h):
-        self.prev = 0
-        self.direction = 0
+        self.prev = 4
+        self.direction = 4
         #   Nine directions:
         #   0 1 2
         #   3 4 5
@@ -54,10 +54,10 @@ class Gaze():
 def x_tilt(shape, FT):
     right = dist.euclidean(shape[30], shape[31])
     left = dist.euclidean(shape[30], shape[35])
-    if right > left + left * 0.5:
-        FT.x_tilt = "L"
-    elif left > right + right * 0.5:
-        FT.x_tilt = "R"
+    if right > left + left * 0.6:
+        FT.x_tilt = "F"
+    elif left > right + right * 0.6:
+        FT.x_tilt = "F"
     else:
         FT.x_tilt = "F"
 
@@ -80,18 +80,24 @@ def eyegaze(eyes):
     right = eyes[1]
     if left.closed or right.closed:
         return "D"
-    #if left.pupil[0] < left.center_xy[0] - (left.center_xy[0]//4):
-        #if right.pupil[0] < right.center_xy[0] - (right.center_xy[0]//4):
-            #return "R"
-    if left.pupil[0] < left.center_xy[0]:
-        if right.pupil[0] < right.center_xy[0]:
+    if left.pupil[0] < left.center_xy[0] - (left.center_xy[0]//4):
+        if right.pupil[0] < right.center_xy[0] - (right.center_xy[0]//4):
             return "R"
-    if left.pupil[0] > left.center_xy[0]:
-        if right.pupil[0] > right.center_xy[0]:
+    #if left.pupil[0] < left.center_xy[0]:
+        #if right.pupil[0] < right.center_xy[0]:
+            #return "R"
+    if left.pupil[0] > left.center_xy[0] + (left.center_xy[0]//4):
+        if right.pupil[0] > right.center_xy[0] + (left.center_xy[0]//4):
             return "L"
-    if left.pupil[1] >= left.center_xy[1] + (max(right.box[2]//4,1)):
-        if right.pupil[1] >= right.center_xy[1] + (max(right.box[2]//4,1)):
+    #if left.pupil[0] > left.center_xy[0]:
+        #if right.pupil[0] > right.center_xy[0]:
+            #return "L"
+    if left.pupil[1] >= left.center_xy[1] + (right.box[2]//4):
+        if right.pupil[1] >= right.center_xy[1] + (right.box[2]//4):
             return "D"
+    if left.pupil[1] <= left.center_xy[1] - (right.box[2]//4):
+        if right.pupil[1] <= right.center_xy[1] - (right.box[2]//4):
+            return "U"
     else:
         return "F"
 
@@ -100,12 +106,16 @@ def gaze_direction(eye_gaze, FT, G):
     # Is there a cooler way to do this with states?
     d = 4
     if FT.x_tilt == "F" and FT.y_tilt == "F":
-        if eye_gaze == "R":
+        if eye_gaze == "U":
+            d = 1
+        elif eye_gaze == "R":
             d = 3
         elif eye_gaze == "F":
             d = 4
         elif eye_gaze == "L":
             d = 5
+        else:
+            d = 7
     elif FT.x_tilt == "R" and FT.y_tilt == "D":
         if eye_gaze == "L":
             d = 7
@@ -132,9 +142,10 @@ def gaze_direction(eye_gaze, FT, G):
 
 
 def draw(frame, G):
+    #d = G.direction
     #if G.direction != G.prev:
+        #d = G.prev
         #G.prev = G.direction
-        #return frame
     box = G.boxs[G.direction]
     overlay = frame.copy()
     cv2.rectangle(overlay, box[0], box[1], (255,0,0), -1)
@@ -161,11 +172,17 @@ def read_vid():
             gaze_direction(eye_gaze, FT, G)
             frame = draw(frame, G)
             for eye in eyes:
+                cv2.circle(frame, (eye.center_xy), 4, (255, 255, 255), -1)
                 cv2.circle(frame, (eye.pupil), 2, (0, 0, 255), -1)
+                cv2.rectangle(
+                    frame,
+                    (eye.box[0], eye.box[1]),
+                    (eye.box[0]+eye.box[2], eye.box[1]+eye.box[3]),
+                    (255,255,255), 1)
             #cv2.putText(frame, f"{eye_gaze}-{FT}", (10,25), 0, 1, (0,0,255), 1)
             #for x, y in shape:
                 #cv2.circle(frame, (x, y), 2, (0, 0, 255), -1)
-            writer.write(frame)
+            #writer.write(frame)
         cv2.imshow("", frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
@@ -181,7 +198,7 @@ def meta_info(vid):
 
 
 if __name__ == "__main__":
-    in_vid = "vids/jimmy5.mp4"
+    in_vid = "vids/m0.mp4"
     w, h, fps = meta_info(in_vid)
     fourcc = cv2.VideoWriter_fourcc("m", "p", "4", "v")
     writer = cv2.VideoWriter(f"tmp0.mp4", fourcc, fps, (w,h), True)
