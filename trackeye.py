@@ -28,6 +28,7 @@ class Eye:
 		self.BGR = (0,0,0)
 		self.closed = False
 		self.LR = LR
+		self.center_xy = (0,0)
 
 	def __repr__(self):
 		return f"{self.LR}: {self.pupil}, {self.BGR}"
@@ -93,17 +94,20 @@ def find_centers(eyes, img):
 			cx = r
 		eye.iris = eye.img[0 : d, cx-r : cx+r]
 		eye.pupil = (x+cx, y+cy)
+		eye.center_xy = (x+w//2, y+h//2)
 
 
 def find_colors(eyes):
 	for eye in eyes:
 		if eye.closed:
 			continue
+		if eye.iris.shape[0] < 10:
+			return
 		bgr = []
 		mid_x = eye.iris.shape[1] // 2
 		qtr_x = eye.iris.shape[1] // 8
 		for x in range(mid_x-qtr_x+1, mid_x+qtr_x):
-			y = eye.iris.shape[0]-4
+			y = eye.iris.shape[0] - 4
 			prev_avg = None
 			while y > eye.iris.shape[0] // 2:
 				y -= 1
@@ -122,6 +126,8 @@ def find_colors(eyes):
 			b += i[0]
 			g += i[1]
 			r += i[2]
+		if len(bgr) == 0:
+			return
 		b = int(b // len(bgr))
 		g = int(g // len(bgr))
 		r = int(r // len(bgr))
