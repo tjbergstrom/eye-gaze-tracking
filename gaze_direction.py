@@ -69,35 +69,46 @@ def y_tilt(shape, FT):
         FT.upr_lip = upr_lip
     if chin > FT.chin:
         FT.chin = chin
-    if upr_lip < FT.upr_lip * 0.8 and chin < FT.chin * 0.8:
+    if upr_lip < FT.upr_lip * 0.75 and chin < FT.chin * 0.75:
         FT.y_tilt = "D"
     else:
         FT.y_tilt = "F"
 
 
 def eyegaze(eyes):
+    #
+    #          -hr
+    #  -wr  center_xy  +wr
+    #          +hr
+    #
     left = eyes[0]
     right = eyes[1]
+    left_w = left.box[2]
+    right_w = right.box[2]
+    left_wr = int(left_w * 0.21)
+    right_wr = int(right_w * 0.24)
+    left_h = left.box[3]
+    right_h = left.box[3]
+    left_hr = int(left_h * 0.30)
+    right_hr = int(right_h * .30)
     if left.closed or right.closed:
         return "D"
-    if left.pupil[0] < left.center_xy[0] - (left.center_xy[0]//4):
-        if right.pupil[0] < right.center_xy[0] - (right.center_xy[0]//4):
-            return "R"
-    #if left.pupil[0] < left.center_xy[0]:
-        #if right.pupil[0] < right.center_xy[0]:
-            #return "R"
-    if left.pupil[0] > left.center_xy[0] + (left.center_xy[0]//4):
-        if right.pupil[0] > right.center_xy[0] + (left.center_xy[0]//4):
-            return "L"
-    #if left.pupil[0] > left.center_xy[0]:
-        #if right.pupil[0] > right.center_xy[0]:
-            #return "L"
-    if left.pupil[1] >= left.center_xy[1] + (right.box[2]//4):
-        if right.pupil[1] >= right.center_xy[1] + (right.box[2]//4):
-            return "D"
-    if left.pupil[1] <= left.center_xy[1] - (right.box[2]//4):
-        if right.pupil[1] <= right.center_xy[1] - (right.box[2]//4):
-            return "U"
+    if left.pupil[0] < left.center_xy[0] - left_wr:
+        return "R"
+    if right.pupil[0] < right.center_xy[0] - right_wr:
+        return "R"
+    if left.pupil[0] > left.center_xy[0] + left_wr:
+        return "L"
+    if right.pupil[0] > right.center_xy[0] + right_wr:
+        return "L"
+    if left.pupil[1] < left.center_xy[1] - left_hr:
+        return "U"
+    if right.pupil[1] < right.center_xy[1] - right_hr:
+        return "U"
+    if left.pupil[1] > left.center_xy[1] + left_hr:
+        return "D"
+    if right.pupil[1] > right.center_xy[1] + right_hr:
+        return "D"
     else:
         return "F"
 
@@ -122,7 +133,10 @@ def gaze_direction(eye_gaze, FT, G):
         else:
             d = 6
     elif FT.x_tilt == "F" and FT.y_tilt == "D":
-        d = 7
+        if eye_gaze == "U":
+            d = 4
+        else:
+            d = 7
     elif FT.x_tilt == "L" and FT.y_tilt == "D":
         if eye_gaze == "R":
             d = 7
@@ -131,11 +145,15 @@ def gaze_direction(eye_gaze, FT, G):
     elif FT.x_tilt == "R" and FT.y_tilt == "F":
         if eye_gaze == "L":
             d = 4
+        elif eye_gaze == "U":
+            d = 0
         else:
             d = 3
     elif FT.x_tilt == "L" and FT.y_tilt == "F":
         if eye_gaze == "R":
             d = 4
+        elif eye_gaze == "U":
+            d = 2
         else:
             d = 5
     G.direction = d
@@ -182,8 +200,10 @@ def read_vid():
             #cv2.putText(frame, f"{eye_gaze}-{FT}", (10,25), 0, 1, (0,0,255), 1)
             #for x, y in shape:
                 #cv2.circle(frame, (x, y), 2, (0, 0, 255), -1)
-            #writer.write(frame)
+            writer.write(frame)
+            break
         cv2.imshow("", frame)
+        #cv2.imshow("", np.hstack([eyes[0].img, eyes[0].thresh]))
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 

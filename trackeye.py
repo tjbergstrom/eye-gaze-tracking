@@ -29,6 +29,7 @@ class Eye:
 		self.closed = False
 		self.LR = LR
 		self.center_xy = (0,0)
+		self.thresh = None
 
 	def __repr__(self):
 		return f"{self.LR}: {self.pupil}, {self.BGR}"
@@ -79,7 +80,9 @@ def find_centers(eyes, img):
 		eye.img = img[y : y+h, x : x+w]
 		eye_img = cv2.cvtColor(eye.img, cv2.COLOR_BGR2GRAY)
 		thresh = cv2.threshold(eye_img, 125, 255, cv2.THRESH_BINARY)[1]
-		thresh = cv2.erode(thresh, None, iterations=2)
+		#thresh = cv2.erode(thresh, None, iterations=2)
+		thresh = cv2.dilate(thresh, None, iterations=2)
+		#thresh = cv2.medianBlur(thresh, 3)
 		thresh = cv2.bitwise_not(thresh)
 		contours = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)[0]
 		if not contours:
@@ -95,6 +98,9 @@ def find_centers(eyes, img):
 		eye.iris = eye.img[0 : d, cx-r : cx+r]
 		eye.pupil = (x+cx, y+cy)
 		eye.center_xy = (x+w//2, y+h//2)
+		#eye.thresh = thresh
+		#eye.img = eye_img
+		#cv2.circle(thresh, (cx, cy), 2, (0, 0), -1)
 
 
 def find_colors(eyes):
