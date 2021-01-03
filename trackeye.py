@@ -108,7 +108,7 @@ def find_colors(eyes):
 		if eye.closed:
 			continue
 		if eye.iris.shape[0] < 10:
-			return
+			continue
 		bgr = []
 		mid_x = eye.iris.shape[1] // 2
 		qtr_x = eye.iris.shape[1] // 8
@@ -133,7 +133,7 @@ def find_colors(eyes):
 			g += i[1]
 			r += i[2]
 		if len(bgr) == 0:
-			return
+			continue
 		b = int(b // len(bgr))
 		g = int(g // len(bgr))
 		r = int(r // len(bgr))

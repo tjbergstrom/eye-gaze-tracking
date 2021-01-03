@@ -5,7 +5,8 @@
 # With an input a video file...
 # Get the gaze direction, assuming only one person in the frame.
 # Calculate the face tilt direction and the eye gaze direction,
-# and use these to determine relatively which direction the person is looking
+# and use these to determine relatively which direction the person is looking.
+# Assuming the person is at the center of the frame.
 
 
 import cv2
@@ -13,6 +14,7 @@ import dlib
 import numpy as np
 from scipy.spatial import distance as dist
 import trackeye
+import imutils
 
 
 class Face_Tilt:
@@ -54,10 +56,10 @@ class Gaze():
 def x_tilt(shape, FT):
     right = dist.euclidean(shape[30], shape[31])
     left = dist.euclidean(shape[30], shape[35])
-    if right > left + left * 0.6:
-        FT.x_tilt = "F"
-    elif left > right + right * 0.6:
-        FT.x_tilt = "F"
+    if right > left + left * 0.75:
+        FT.x_tilt = "L"
+    elif left > right + right * 0.75:
+        FT.x_tilt = "R"
     else:
         FT.x_tilt = "F"
 
@@ -167,7 +169,7 @@ def draw(frame, G):
     box = G.boxs[G.direction]
     overlay = frame.copy()
     cv2.rectangle(overlay, box[0], box[1], (255,0,0), -1)
-    frame = cv2.addWeighted(overlay, 0.5, frame, 0.5, 0, 0)
+    frame = cv2.addWeighted(overlay, 0.4, frame, 0.6, 0, 0)
     return frame
 
 
@@ -190,13 +192,24 @@ def read_vid():
             gaze_direction(eye_gaze, FT, G)
             frame = draw(frame, G)
             for eye in eyes:
-                cv2.circle(frame, (eye.center_xy), 4, (255, 255, 255), -1)
-                cv2.circle(frame, (eye.pupil), 2, (0, 0, 255), -1)
-                cv2.rectangle(
-                    frame,
-                    (eye.box[0], eye.box[1]),
-                    (eye.box[0]+eye.box[2], eye.box[1]+eye.box[3]),
-                    (255,255,255), 1)
+                #cv2.circle(frame, (eye.center_xy), 4, (255, 255, 255), -1)
+                #cv2.rectangle(
+                    #frame,
+                    #(eye.box[0], eye.box[1]),
+                    #(eye.box[0]+eye.box[2], eye.box[1]+eye.box[3]),
+                    #(255,255,255), 1)
+                if not eye.closed:
+                    #cv2.rectangle(
+                        #frame,
+                        #(eye.box[0], eye.box[1]),
+                        #eye.center_xy,
+                        #(255,255,255), 1)
+                    #cv2.rectangle(
+                        #frame,
+                        #eye.center_xy,
+                        #(eye.box[0]+eye.box[2], eye.box[1]+eye.box[3]),
+                        #(255,255,255), 1)
+                    cv2.circle(frame, (eye.pupil), 2, (0, 0, 255), -1)
             #cv2.putText(frame, f"{eye_gaze}-{FT}", (10,25), 0, 1, (0,0,255), 1)
             #for x, y in shape:
                 #cv2.circle(frame, (x, y), 2, (0, 0, 255), -1)
