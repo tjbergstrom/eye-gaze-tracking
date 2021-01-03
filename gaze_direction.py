@@ -69,7 +69,7 @@ def y_tilt(shape, FT):
         FT.upr_lip = upr_lip
     if chin > FT.chin:
         FT.chin = chin
-    if upr_lip < FT.upr_lip * 0.75 and chin < FT.chin * 0.75:
+    if upr_lip < FT.upr_lip * 0.70 and chin < FT.chin * 0.70:
         FT.y_tilt = "D"
     else:
         FT.y_tilt = "F"
@@ -85,8 +85,8 @@ def eyegaze(eyes):
     right = eyes[1]
     left_w = left.box[2]
     right_w = right.box[2]
-    left_wr = int(left_w * 0.21)
-    right_wr = int(right_w * 0.24)
+    left_wr = int(left_w * 0.20)
+    right_wr = int(right_w * 0.20)
     left_h = left.box[3]
     right_h = left.box[3]
     left_hr = int(left_h * 0.30)
@@ -211,6 +211,7 @@ def read_vid():
 def meta_info(vid):
     cap = cv2.VideoCapture(vid)
     fps = int(cap.get(cv2.CAP_PROP_FPS))
+    fps -= 2
     w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     cap.release()
