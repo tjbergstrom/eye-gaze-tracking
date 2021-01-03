@@ -1,45 +1,39 @@
 # trackeye.py
 # $ python3 trackeye.py
 # Dec. 2020
-# Starting over,
-# Maybe just try to detect eye colors, that seems do-able right?
-# And maybe later try to detect gaze direction
+#
+# Using the Dlib facial landmarks points detector to extract eyes.
+# And figuring out some tricks to actually locate the iris and pupil.
+# And caclulate the iris color.
 
 
 from scipy.spatial import distance as dist
 import numpy as np
-import argparse
+import statistics
 import imutils
 import dlib
 import cv2
-import statistics
-from imutils import build_montages
 
 
 class Eye:
 	def __init__(self, LR=""):
+		self.LR = LR
 		self.points = []
 		self.box = (0,0,0,0)
-		self.img = None
-		self.hull = None
-		self.iris = None
+		self.center_xy = (0,0)
 		self.pupil = (0,0)
-		self.color = ""
+		self.img = None
+		self.iris = None
 		self.BGR = (0,0,0)
 		self.closed = False
-		self.LR = LR
-		self.center_xy = (0,0)
-		self.thresh = None
 
 	def __repr__(self):
-		return f"{self.LR}: {self.pupil}, {self.BGR}"
+		return f"{self.LR}: {self.pupil}"
 
 
 def aspect_ratio(eye):
-	# Vertical xy coords
 	A = dist.euclidean(eye[1], eye[5])
 	B = dist.euclidean(eye[2], eye[4])
-	# Horizontal xy coords
 	C = dist.euclidean(eye[0], eye[3])
 	return (A + B) / (2.0 * C)
 
@@ -63,10 +57,10 @@ def extract_eyes(predictor, detector, gray):
 			left.closed = True
 		if aspect_ratio(right.points) < 0.2:
 			right.closed = True
-		left.hull = cv2.convexHull(left.points)
-		right.hull = cv2.convexHull(right.points)
-		left.box = cv2.boundingRect(left.hull)
-		right.box = cv2.boundingRect(right.hull)
+		left_hull = cv2.convexHull(left.points)
+		right_hull = cv2.convexHull(right.points)
+		left.box = cv2.boundingRect(left_hull)
+		right.box = cv2.boundingRect(right_hull)
 		eyes.append(left)
 		eyes.append(right)
 	return eyes
@@ -80,9 +74,7 @@ def find_centers(eyes, img):
 		eye.img = img[y : y+h, x : x+w]
 		eye_img = cv2.cvtColor(eye.img, cv2.COLOR_BGR2GRAY)
 		thresh = cv2.threshold(eye_img, 125, 255, cv2.THRESH_BINARY)[1]
-		#thresh = cv2.erode(thresh, None, iterations=2)
 		thresh = cv2.dilate(thresh, None, iterations=2)
-		#thresh = cv2.medianBlur(thresh, 3)
 		thresh = cv2.bitwise_not(thresh)
 		contours = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)[0]
 		if not contours:
@@ -98,9 +90,6 @@ def find_centers(eyes, img):
 		eye.iris = eye.img[0 : d, cx-r : cx+r]
 		eye.pupil = (x+cx, y+cy)
 		eye.center_xy = (x+w//2, y+h//2)
-		#eye.thresh = thresh
-		#eye.img = eye_img
-		#cv2.circle(thresh, (cx, cy), 2, (0, 0), -1)
 
 
 def find_colors(eyes):
@@ -138,47 +127,6 @@ def find_colors(eyes):
 		g = int(g // len(bgr))
 		r = int(r // len(bgr))
 		eye.BGR = (b,g,r)
-
-
-def sample_output(eyes, img, sz=200):
-	imgs = [img]
-	img_cpy = img.copy()
-	for eye in eyes:
-		if eye.closed:
-			continue
-		imgs.append(eye.iris)
-		color = np.zeros((sz, sz, 3), np.uint8)
-		color[:,:] = eye.BGR
-		imgs.append(color)
-		cv2.circle(img_cpy, eye.pupil, 13, (255,255,255), -1)
-	imgs.append(img_cpy)
-	imgs_cpy = [imgs[0], imgs[1], imgs[3], imgs[5], imgs[2], imgs[4]]
-	m = build_montages(imgs_cpy, (sz, sz), (3, 2))[0]
-	cv2.imshow("", m)
-	cv2.waitKey(0)
-
-
-if __name__ == "__main__":
-	ap = argparse.ArgumentParser()
-	ap.add_argument("-i", "--image", type=str, default="images/photo_9.jpg")
-	args = vars(ap.parse_args())
-
-	detector = dlib.get_frontal_face_detector()
-	predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
-
-	img_path = args["image"]
-	img = cv2.imread(img_path)
-	img = imutils.resize(img, 500)
-	gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-	eyes = extract_eyes(predictor, detector, gray)
-
-	find_centers(eyes, img)
-	find_colors(eyes)
-
-	sample_output(eyes, img)
-
-	print(eyes)
 
 
 
