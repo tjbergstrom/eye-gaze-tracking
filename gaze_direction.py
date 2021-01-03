@@ -19,8 +19,12 @@ import imutils
 
 class Face_Tilt:
     def __init__(self):
-        self.x_tilt = "" # left right forward or L R F
-        self.y_tilt = "" # up down forward or U D F
+        #   Five tilts:
+        #     1
+        #   3 4 5
+        #     7
+        self.x_tilt = 4 # right=3 forward=4 left=5
+        self.y_tilt = 4 # up=1 forward=4 down=7
         self.upr_lip = 0
         self.chin = 0
 
@@ -28,11 +32,11 @@ class Face_Tilt:
         right = dist.euclidean(shape[30], shape[31])
         left = dist.euclidean(shape[30], shape[35])
         if right > left + left * 0.80:
-            self.x_tilt = "L"
+            self.x_tilt = 5
         elif left > right + right * 0.80:
-            self.x_tilt = "R"
+            self.x_tilt = 3
         else:
-            self.x_tilt = "F"
+            self.x_tilt = 4
 
     def determine_y_tilt(self, shape):
         upr_lip = dist.euclidean(shape[33], shape[51])
@@ -42,9 +46,9 @@ class Face_Tilt:
         if chin > self.chin:
             self.chin = chin
         if upr_lip < self.upr_lip * 0.70 and chin < self.chin * 0.70:
-            self.y_tilt = "D"
+            self.y_tilt = 7
         else:
-            self.y_tilt = "F"
+            self.y_tilt = 4
 
 
 class Gaze():
@@ -74,89 +78,68 @@ class Gaze():
         return cv2.addWeighted(overlay, 0.4, frame, 0.6, 0, 0)
 
 
-
-
-def eyegaze(eyes):
+def determine_eye_gaze(eyes):
+    # How far away is the pupil from the center of the detected eye point
     #
-    #          -hr
-    #  -wr  center_xy  +wr
-    #          +hr
+    #          -hr                    1
+    #  -wr  center_xy  +wr          3 4 5
+    #          +hr                    7
     #
-    left = eyes[0]
-    right = eyes[1]
-    left_w = left.box[2]
-    right_w = right.box[2]
-    left_wr = int(left_w * 0.20)
-    right_wr = int(right_w * 0.20)
-    left_h = left.box[3]
-    right_h = left.box[3]
-    left_hr = int(left_h * 0.30)
-    right_hr = int(right_h * .30)
-    if left.closed or right.closed:
-        return "D"
-    if left.pupil[0] < left.center_xy[0] - left_wr:
-        return "R"
-    if right.pupil[0] < right.center_xy[0] - right_wr:
-        return "R"
-    if left.pupil[0] > left.center_xy[0] + left_wr:
-        return "L"
-    if right.pupil[0] > right.center_xy[0] + right_wr:
-        return "L"
-    if left.pupil[1] < left.center_xy[1] - left_hr:
-        return "U"
-    if right.pupil[1] < right.center_xy[1] - right_hr:
-        return "U"
-    if left.pupil[1] > left.center_xy[1] + left_hr:
-        return "D"
-    if right.pupil[1] > right.center_xy[1] + right_hr:
-        return "D"
-    else:
-        return "F"
+    for eye in eyes:
+        wr = int(eye.box[2] * 0.20)
+        hr = int(eye.box[3] * 0.30)
+        if eye.closed:
+            return 7
+        if eye.pupil[0] < eye.center_xy[0] - wr:
+            return 3
+        if eye.pupil[0] > eye.center_xy[0] + wr:
+            return 5
+        if eye.pupil[1] < eye.center_xy[1] - hr:
+            return 1
+        if eye.pupil[1] > eye.center_xy[1] + hr:
+            return 7
+    return 4
 
 
 def gaze_direction(eye_gaze, FT, G):
-    # Is there a cooler way to do this with states?
     d = 4
-    if FT.x_tilt == "F" and FT.y_tilt == "F":
-        if eye_gaze == "U":
-            d = 1
-        elif eye_gaze == "R":
-            d = 3
-        elif eye_gaze == "F":
-            d = 4
-        elif eye_gaze == "L":
-            d = 5
-        else:
-            d = 7
-    elif FT.x_tilt == "R" and FT.y_tilt == "D":
-        if eye_gaze == "L":
-            d = 7
-        else:
-            d = 6
-    elif FT.x_tilt == "F" and FT.y_tilt == "D":
-        if eye_gaze == "U":
+    # Facing forward
+    if FT.x_tilt == 4 and FT.y_tilt == 4:
+        d = eye_gaze
+    # Facing down
+    elif FT.x_tilt == 4 and FT.y_tilt == 7:
+        if eye_gaze == 1:
             d = 4
         else:
             d = 7
-    elif FT.x_tilt == "L" and FT.y_tilt == "D":
-        if eye_gaze == "R":
-            d = 7
-        else:
-            d = 8
-    elif FT.x_tilt == "R" and FT.y_tilt == "F":
-        if eye_gaze == "L":
+    # Facing left
+    elif FT.x_tilt == 5 and FT.y_tilt == 4:
+        if eye_gaze == 3:
             d = 4
-        elif eye_gaze == "U":
-            d = 0
-        else:
-            d = 3
-    elif FT.x_tilt == "L" and FT.y_tilt == "F":
-        if eye_gaze == "R":
-            d = 4
-        elif eye_gaze == "U":
+        elif eye_gaze == 1:
             d = 2
         else:
             d = 5
+    # Facing right
+    elif FT.x_tilt == 3 and FT.y_tilt == 4:
+        if eye_gaze == 5:
+            d = 4
+        elif eye_gaze == 1:
+            d = 0
+        else:
+            d = 3
+    # Facing right and down
+    elif FT.x_tilt == 3 and FT.y_tilt == 7:
+        if eye_gaze == 5:
+            d = 7
+        else:
+            d = 6
+    # Facing left and down
+    elif FT.x_tilt == 5 and FT.y_tilt == 7:
+        if eye_gaze == 3:
+            d = 7
+        else:
+            d = 8
     G.direction = d
 
 
@@ -198,7 +181,7 @@ def read_vid():
             FT.determine_y_tilt(shape)
             eyes = trackeye.extract_eyes(predictor, detector, gray)
             trackeye.find_centers(eyes, frame)
-            eye_gaze = eyegaze(eyes)
+            eye_gaze = determine_eye_gaze(eyes)
             gaze_direction(eye_gaze, FT, G)
             frame = G.draw_gaze(frame)
             frame = draw_eyes(frame, eyes)
@@ -212,10 +195,10 @@ def read_vid():
             break
 
 
-def meta_info(vid):
+def vid_info(vid):
     cap = cv2.VideoCapture(vid)
     fps = int(cap.get(cv2.CAP_PROP_FPS))
-    fps -= 2
+    fps -= 3
     w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     cap.release()
@@ -224,7 +207,7 @@ def meta_info(vid):
 
 if __name__ == "__main__":
     in_vid = "vids/m0.mp4"
-    w, h, fps = meta_info(in_vid)
+    w, h, fps = vid_info(in_vid)
     fourcc = cv2.VideoWriter_fourcc("m", "p", "4", "v")
     writer = cv2.VideoWriter(f"tmp0.mp4", fourcc, fps, (w,h), True)
     detector = dlib.get_frontal_face_detector()
