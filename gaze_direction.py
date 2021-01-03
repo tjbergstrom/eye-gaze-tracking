@@ -147,6 +147,7 @@ def gaze_direction(eye_gaze, FT, G):
 
 
 def draw_eyes(frame, eyes):
+    trackeye.find_colors(eyes)
     for eye in eyes:
         #cv2.circle(frame, (eye.center_xy), 4, (255, 255, 255), -1)
         #cv2.rectangle(
@@ -166,6 +167,12 @@ def draw_eyes(frame, eyes):
                 #(eye.box[0]+eye.box[2], eye.box[1]+eye.box[3]),
                 #(255,255,255), 1)
             cv2.circle(frame, (eye.pupil), 2, (0, 0, 255), -1)
+            if eye.LR == "L":
+                cv2.rectangle(frame, (w-128, 0), (w-64, 64), eye.BGR, -1)
+            else:
+                cv2.rectangle(frame, (w-64, 0), (w, 64), eye.BGR, -1)
+    if not eyes[0].closed or not eyes[1].closed:
+        cv2.putText(frame, "(eye colors)", (w-96, 56), 0, 0.42, (255,255,255), 1)
     return frame
 
 
