@@ -50,6 +50,9 @@ class Face_Tilt:
         else:
             self.y_tilt = 4
 
+    def tilt(self):
+        return (self.x_tilt, self.y_tilt)
+
 
 class Gaze():
     def __init__(self, w, h):
@@ -104,16 +107,16 @@ def determine_eye_gaze(eyes):
 def gaze_direction(eye_gaze, FT, G):
     d = 4
     # Facing forward
-    if FT.x_tilt == 4 and FT.y_tilt == 4:
+    if FT.tilt() == (4, 4):
         d = eye_gaze
     # Facing down
-    elif FT.x_tilt == 4 and FT.y_tilt == 7:
+    elif FT.tilt() == (4, 7):
         if eye_gaze == 1:
             d = 4
         else:
             d = 7
     # Facing left
-    elif FT.x_tilt == 5 and FT.y_tilt == 4:
+    elif FT.tilt() == (5, 4):
         if eye_gaze == 3:
             d = 4
         elif eye_gaze == 1:
@@ -121,7 +124,7 @@ def gaze_direction(eye_gaze, FT, G):
         else:
             d = 5
     # Facing right
-    elif FT.x_tilt == 3 and FT.y_tilt == 4:
+    elif FT.tilt() == (3, 4):
         if eye_gaze == 5:
             d = 4
         elif eye_gaze == 1:
@@ -129,13 +132,13 @@ def gaze_direction(eye_gaze, FT, G):
         else:
             d = 3
     # Facing right and down
-    elif FT.x_tilt == 3 and FT.y_tilt == 7:
+    elif FT.tilt() == (3, 7):
         if eye_gaze == 5:
             d = 7
         else:
             d = 6
     # Facing left and down
-    elif FT.x_tilt == 5 and FT.y_tilt == 7:
+    elif FT.tilt() == (5, 7):
         if eye_gaze == 3:
             d = 7
         else:
