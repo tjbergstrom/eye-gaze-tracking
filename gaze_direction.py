@@ -15,6 +15,7 @@ import numpy as np
 from scipy.spatial import distance as dist
 import trackeye
 import imutils
+import math
 
 
 class Face_Tilt:
@@ -81,6 +82,25 @@ class Gaze():
         return cv2.addWeighted(overlay, 0.4, frame, 0.6, 0, 0)
 
 
+def check_corners(eye):
+    #
+    #   0 - 2
+    #   - - -
+    #   6 - 8
+    #
+    if eye.pupil[0] < eye.center_xy[0]:
+        if eye.pupil[1] < eye.center_xy[1]:
+            return 0
+        if eye.pupil[1] > eye.center_xy[1]:
+            return 6
+    if eye.pupil[0] > eye.center_xy[0]:
+        if eye.pupil[1] > eye.center_xy[1]:
+            return 8
+        if eye.pupil[1] < eye.center_xy[1]:
+            return 2
+    return 4
+
+
 def determine_eye_gaze(eyes):
     # How far away is the pupil from the center of the detected eye point
     #
@@ -89,10 +109,16 @@ def determine_eye_gaze(eyes):
     #          +hr                    7
     #
     for eye in eyes:
-        wr = int(eye.box[2] * 0.20)
-        hr = int(eye.box[3] * 0.30)
         if eye.closed:
             return 7
+        a = eye.box[2] * 0.25
+        b = eye.box[3] * 0.25
+        radius = math.sqrt( a**2 + b**2 )
+        pupil = dist.euclidean(eye.pupil, eye.center_xy)
+        if pupil > radius:
+            return check_corners(eye)
+        wr = int(eye.box[2] * 0.20)
+        hr = int(eye.box[3] * 0.30)
         if eye.pupil[0] < eye.center_xy[0] - wr:
             return 3
         if eye.pupil[0] > eye.center_xy[0] + wr:
@@ -149,7 +175,7 @@ def gaze_direction(eye_gaze, FT, G):
 def draw_eyes(frame, eyes):
     trackeye.find_colors(eyes)
     for eye in eyes:
-        #cv2.circle(frame, (eye.center_xy), 4, (255, 255, 255), -1)
+        #cv2.circle(frame, (eye.center_xy), 3, (255, 255, 255), -1)
         #cv2.rectangle(
             #frame,
             #(eye.box[0], eye.box[1]),
@@ -208,7 +234,7 @@ def read_vid():
 def vid_info(vid):
     cap = cv2.VideoCapture(vid)
     fps = int(cap.get(cv2.CAP_PROP_FPS))
-    fps -= 3
+    fps -= 5
     w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     cap.release()
