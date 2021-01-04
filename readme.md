@@ -4,7 +4,7 @@ Just seeing what's possible. Having fun solving some challenges.
 <br>
 <br>
 
-![alt text](https://raw.githubusercontent.com/tjbergstrom/eye-gaze-tracking/master/vids/save15.gif)
+![alt text](https://raw.githubusercontent.com/tjbergstrom/eye-gaze-tracking/master/vids/save24.gif)
 
 <br>
 <br>
